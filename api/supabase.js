@@ -1,19 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
 import formidable from "formidable";
 import fs from "fs";
 
 export const config = {
   api: {
-    bodyParser: false,
-  },
+    bodyParser: false
+  }
 };
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
 export default async function handler(req, res) {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+
   if (req.method === "POST") {
     const form = new formidable.IncomingForm();
 
@@ -30,49 +27,64 @@ export default async function handler(req, res) {
 
           const buffer = fs.readFileSync(file.filepath);
 
-          const { data, error } = await supabase.storage
-            .from("posts")
-            .upload(`${Date.now()}-${file.originalFilename}`, buffer, {
-              contentType: file.mimetype,
-            });
+          const uploadRes = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/posts/${Date.now()}-${file.originalFilename}`,
+            {
+              method: "POST",
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": file.mimetype
+              },
+              body: buffer
+            }
+          );
 
-          if (error) throw error;
+          if (!uploadRes.ok) throw new Error("Erro no upload");
 
-          return `${process.env.SUPABASE_URL}/storage/v1/object/public/posts/${data.path}`;
+          return `${SUPABASE_URL}/storage/v1/object/public/posts/${Date.now()}-${file.originalFilename}`;
         }
 
         const arquivo1 = await upload(files.file1);
         const arquivo2 = await upload(files.file2);
         const arquivo3 = await upload(files.file3);
 
-        const { error } = await supabase.from("posts").insert([
-          {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/posts`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
             nome,
             titulo,
             conteudo,
             arquivo1,
             arquivo2,
-            arquivo3,
-          },
-        ]);
+            arquivo3
+          })
+        });
 
-        if (error) throw error;
+        if (!response.ok) throw new Error("Erro ao inserir no banco");
 
-        res.status(200).json({ ok: true });
+        return res.status(200).json({ ok: true });
       } catch (e) {
         console.error(e);
-        res.status(500).json({ error: "Erro interno" });
+        return res.status(500).json({ error: "Erro interno" });
       }
     });
   }
 
   if (req.method === "GET") {
-    const { data, error } = await supabase
-      .from("posts")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/posts?select=*`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    });
 
-    if (error) return res.status(500).json(error);
+    const data = await response.json();
     return res.status(200).json(data);
   }
 }
