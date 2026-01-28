@@ -1,0 +1,44 @@
+body {
+  background: #0f0f0f;
+  color: white;
+  font-family: Arial;
+}
+
+#posts {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.card {
+  min-width: 220px;
+  background: #161616;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+button {
+  margin-top: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: none;
+}
+
+.popup-content {
+  background: #161616;
+  padding: 20px;
+  margin: 5% auto;
+  width: 80%;
+  border-radius: 12px;
+}
