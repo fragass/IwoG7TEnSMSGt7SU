@@ -17,6 +17,6 @@ async function enviarPost() {
   if (res.ok) {
     alert("Post criado!");
   } else {
-    alert("Erro ao criar post.");
+    alert("Erro ao criar post");
   }
 }
