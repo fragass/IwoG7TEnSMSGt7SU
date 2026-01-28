@@ -2,9 +2,7 @@ import formidable from "formidable";
 import fs from "fs";
 
 export const config = {
-  api: {
-    bodyParser: false
-  }
+  api: { bodyParser: false }
 };
 
 export default async function handler(req, res) {
@@ -16,7 +14,7 @@ export default async function handler(req, res) {
 
     form.parse(req, async (err, fields, files) => {
       try {
-        if (err) return res.status(500).json({ error: "Erro no form" });
+        if (err) throw err;
 
         const nome = fields.nome;
         const titulo = fields.titulo;
@@ -26,9 +24,10 @@ export default async function handler(req, res) {
           if (!file) return null;
 
           const buffer = fs.readFileSync(file.filepath);
+          const filename = `${Date.now()}-${file.originalFilename}`;
 
           const uploadRes = await fetch(
-            `${SUPABASE_URL}/storage/v1/object/posts/${Date.now()}-${file.originalFilename}`,
+            `${SUPABASE_URL}/storage/v1/object/posts/${filename}`,
             {
               method: "POST",
               headers: {
@@ -40,9 +39,12 @@ export default async function handler(req, res) {
             }
           );
 
-          if (!uploadRes.ok) throw new Error("Erro no upload");
+          if (!uploadRes.ok) {
+            const t = await uploadRes.text();
+            throw new Error("Upload falhou: " + t);
+          }
 
-          return `${SUPABASE_URL}/storage/v1/object/public/posts/${Date.now()}-${file.originalFilename}`;
+          return `${SUPABASE_URL}/storage/v1/object/public/posts/${filename}`;
         }
 
         const arquivo1 = await upload(files.file1);
@@ -66,12 +68,15 @@ export default async function handler(req, res) {
           })
         });
 
-        if (!response.ok) throw new Error("Erro ao inserir no banco");
+        if (!response.ok) {
+          const t = await response.text();
+          throw new Error("Insert falhou: " + t);
+        }
 
         return res.status(200).json({ ok: true });
       } catch (e) {
-        console.error(e);
-        return res.status(500).json({ error: "Erro interno" });
+        console.error("API ERROR:", e);
+        return res.status(500).json({ error: e.message });
       }
     });
   }
